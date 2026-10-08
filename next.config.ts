@@ -5,6 +5,7 @@ import type { NextConfig } from "next";
 const basePath = "/redesign/15";
 
 const nextConfig: NextConfig = {
+  turbopack: { root: process.cwd() },
   basePath,
   // basePath는 클라이언트 fetch 경로를 자동으로 바꿔주지 않아서 값을 직접 넘긴다.
   env: { NEXT_PUBLIC_BASE_PATH: basePath },

@@ -22,7 +22,6 @@ import {
   X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ContactWidget } from "@/components/contact-widget";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -572,7 +571,7 @@ export function RedesignWizard() {
         >
           <BrandMark />
           <div>
-            <strong className="block text-sm leading-tight">한이룸의 상세페이지<br />리디자인 마법사 1.5</strong>
+            <strong className="block text-sm leading-tight">상세페이지 리디자인 마법사</strong>
           </div>
         </button>
         <nav className="grid gap-1.5 max-[1120px]:grid-cols-3">
@@ -715,18 +714,6 @@ export function RedesignWizard() {
           onCancel={cancelGeneration}
         />
       )}
-      <ContactWidget
-        context={{
-          surface: view,
-          appState: generating ? "generating" : activeProject?.sections?.length ? "has-results" : "idle",
-          aiProvider: models[selectedModel].label,
-          redesignMode,
-          channel,
-          ratio,
-          sectionCount: activeProject?.sections?.length ?? 0,
-          errorMessage: toast && isPersistentToast(toast) ? toast : undefined
-        }}
-      />
     </div>
   );
 }

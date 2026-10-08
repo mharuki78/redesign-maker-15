@@ -84,9 +84,9 @@ export default function LogoGuidelinesPage() {
           <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Horizontal lockup</p>
           <div className="flex items-center gap-3">
             <BrandMark className="size-12" />
-            <strong className="text-base leading-tight">한이룸의 상세페이지<br />리디자인 마법사 1.5</strong>
+            <strong className="text-base leading-tight">상세페이지 리디자인 마법사</strong>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">워드마크는 2줄까지 허용. 형식은 <code className="font-mono text-xs">한이룸의 [업무] 마법사 [버전]</code>. 마크와 워드마크 간격은 마크 폭의 1/4.</p>
+          <p className="mt-4 text-sm text-muted-foreground">워드마크는 2줄까지 허용. 형식은 <code className="font-mono text-xs">[업무] 마법사</code>. 마크와 워드마크 간격은 마크 폭의 1/4.</p>
         </div>
       </Section>
 
