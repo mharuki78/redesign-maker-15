@@ -561,11 +561,11 @@ export function RedesignWizard() {
   }
 
   return (
-    <div className="mx-auto grid min-h-screen w-full max-w-[1240px] grid-cols-[220px_minmax(0,1fr)] max-[1120px]:grid-cols-1">
-      <aside className="sticky top-0 h-screen p-5 max-[1120px]:static max-[1120px]:h-auto">
+    <div className="mx-auto grid min-h-screen w-full max-w-[1240px] grid-cols-[220px_minmax(0,1fr)] max-[1120px]:grid-cols-1 max-[1120px]:content-start">
+      <aside className="sticky top-0 h-screen p-5 max-[1120px]:static max-[1120px]:h-auto max-md:p-3">
         <button
           type="button"
-          className="mb-7 flex items-center gap-3 rounded-2xl text-left transition hover:opacity-75"
+          className="mb-7 flex min-h-11 items-center gap-3 rounded-2xl text-left transition hover:opacity-75 max-md:mb-3"
           onClick={() => setView("dashboard")}
           aria-label="대시보드로 이동"
         >
@@ -583,13 +583,13 @@ export function RedesignWizard() {
             <button
               key={id}
               className={cn(
-                "flex h-11 items-center justify-between rounded-2xl px-4 text-left text-sm font-medium text-muted-foreground transition hover:bg-white/70 hover:text-foreground",
+                "flex min-h-11 items-center justify-between gap-2 rounded-2xl px-4 text-left text-sm font-medium text-muted-foreground transition hover:bg-white/70 hover:text-foreground max-md:justify-center max-md:px-2 max-md:text-xs",
                 view === id && "bg-[#34d399] text-foreground hover:bg-[#34d399] hover:text-foreground"
               )}
               onClick={() => setView(id as View)}
             >
               {label}
-              <span className="text-xs opacity-60">{index}</span>
+              <span className="text-xs opacity-60 max-md:hidden">{index}</span>
             </button>
           ))}
         </nav>
@@ -606,7 +606,7 @@ export function RedesignWizard() {
         </button>
       </aside>
 
-      <main className="w-full min-w-0 px-6 py-6 max-md:px-4">
+      <main className="w-full min-w-0 px-6 py-6 max-md:px-3 max-md:py-4">
         {view === "dashboard" && (
           <Dashboard
             projects={projects}
@@ -1399,15 +1399,15 @@ function Disclosure({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className={cn("rounded-2xl transition", open && "bg-muted/40")}>
+    <div className={cn("min-w-0 rounded-2xl transition", open && "bg-muted/40")}>
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition hover:bg-muted/40"
+        className="flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition hover:bg-muted/40"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold">{title}</span>
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="shrink-0 text-sm font-semibold">{title}</span>
+        <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           {open ? null : <span className="truncate">{summary}</span>}
           <ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
         </span>
@@ -1445,7 +1445,7 @@ function UploadArea({
       <button
         type="button"
         className={cn(
-          "grid w-full place-items-center rounded-2xl bg-muted/50 p-6 text-center transition hover:bg-muted",
+          "grid w-full place-items-center rounded-2xl bg-muted/50 p-6 text-center transition hover:bg-muted max-md:p-4",
           compact ? "min-h-24" : "min-h-52",
           dragging && "bg-emerald-50 ring-2 ring-emerald-200",
           files.length > 0 && "bg-emerald-50/60"
