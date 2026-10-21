@@ -29,8 +29,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, withBasePath } from "@/lib/utils";
+import { imageModels as models, type ImageProvider as Model } from "@/lib/image-models";
 
-type Model = "openai" | "google";
 type View = "dashboard" | "workspace" | "results";
 /** restructure: 전환 구조로 재구성 / preserve: 원본 구성과 문구를 그대로 두고 디자인만 새로 만든다. */
 type RedesignMode = "restructure" | "preserve";
@@ -102,17 +102,6 @@ type GenerationProgress = {
 
 const projectDbName = "hanirum-redesign-projects";
 const projectStoreName = "projects";
-
-const models = {
-  openai: {
-    label: "OpenAI Image 2.0",
-    id: "gpt-image-2-2026-04-21"
-  },
-  google: {
-    label: "Google Nano Banana 2",
-    id: "gemini-3.1-flash-image"
-  }
-};
 
 const commerceTips = [
   "첫 화면은 제품명보다 '누구의 어떤 문제를 해결하는지'가 먼저 보여야 이탈이 줄어듭니다.",
@@ -662,11 +651,11 @@ export function RedesignWizard() {
           </DialogHeader>
           <div className="grid gap-4 p-4">
             <div>
-              <label className="mb-2 block text-xs font-bold text-muted-foreground">OpenAI Image 2.0 API 키</label>
+              <label className="mb-2 block text-xs font-bold text-muted-foreground">{models.openai.label} API 키</label>
               <Input type="password" value={openaiKey} onChange={(event) => setOpenaiKey(event.target.value)} placeholder="sk-..." />
             </div>
             <div>
-              <label className="mb-2 block text-xs font-bold text-muted-foreground">Google Nano Banana 2 API 키</label>
+              <label className="mb-2 block text-xs font-bold text-muted-foreground">{models.google.label} API 키</label>
               <Input type="password" value={googleKey} onChange={(event) => setGoogleKey(event.target.value)} placeholder="AIza..." />
             </div>
             <div className="flex justify-end gap-2">
@@ -1353,7 +1342,7 @@ function Workspace(props: {
               <OptionGroup
                 label="이미지 생성 모델"
                 value={selectedModel}
-                options={[["openai", "OpenAI Image 2.0"], ["google", "Google Nano Banana 2"]]}
+                options={[["openai", models.openai.label], ["google", models.google.label]]}
                 onChange={(value) => setSelectedModel(value as Model)}
               />
               <OptionGroup
@@ -2120,7 +2109,7 @@ function GenerationProgressPanel({
           <div className="rounded-2xl bg-emerald-50 px-4 py-2.5 font-bold text-emerald-800">{progress.phase}</div>
           <div className="rounded-2xl bg-muted/60 px-4 py-2.5 leading-relaxed text-muted-foreground">
             {isLongWait && modelLabel.includes("OpenAI")
-              ? "OpenAI Image 2.0은 이미지 편집 요청이 2분 이상 걸릴 수 있습니다. 특히 긴 상세페이지 캡처나 참조 이미지가 여러 장이면 응답 시간이 길어질 수 있어요."
+              ? `${models.openai.label}은 이미지 편집 요청이 2분 이상 걸릴 수 있습니다. 특히 긴 상세페이지 캡처나 참조 이미지가 여러 장이면 응답 시간이 길어질 수 있어요.`
               : progress.tip}
           </div>
         </div>

@@ -96,17 +96,26 @@ OPENAI_API_KEY
 UI 모델명은 반드시 아래 이름을 사용한다.
 
 ```text
-OpenAI Image 2.0
-Google Nano Banana 2
+OpenAI Image 2.5
+Google Nano Banana 2.1
 ```
 
 OpenAI 내부 모델 ID는 설정/상세 영역에서만 아래처럼 쓴다.
 
 ```text
-gpt-image-2-2026-04-21
+gpt-image-2.5-sunburst
 ```
 
 OpenAI 모델 최신 여부나 API 사용법을 답할 때는 공식 OpenAI 문서를 우선 확인한다.
+
+- Google 이미지 모델 ID는 `gemini-nano-banana-2.1`이다. 이미지 요청은 Interactions API를 사용한다.
+- UI와 생성·편집 API는 `src/lib/image-models.ts`와 `src/lib/image-generation.ts`를 공유한다.
+- 리디자인 마법사 변경은 항상 `https://github.com/mharuki78/redesign-maker-15.git`에 업데이트한다(사용자 확정, 2026-10-21).
+- 배곧 운영 프로젝트는 Vercel `himawari5/baegot-redesign-maker`다. 기존 `deploy:*` 스크립트의 다른 scope로 배포하지 않는다.
+
+<!-- HIA:START -->
+@AGENTS.md
+<!-- HIA:END -->
 
 ## 7. 카피/결과물 규칙 (1.5)
 

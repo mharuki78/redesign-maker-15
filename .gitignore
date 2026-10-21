@@ -14,3 +14,7 @@ pnpm-debug.log*
 
 # typescript build cache
 tsconfig.tsbuildinfo
+
+# Local verification evidence and instruction backups
+output/
+backups/

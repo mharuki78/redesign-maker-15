@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:local": "next dev -p 3002",
     "build": "next build",
+    "test": "node --test tests/*.test.cjs",
     "start": "next start",
     "deploy:preview": "vercel deploy -y --scope irums-projects-1428d2a1",
     "deploy:prod": "vercel deploy --prod -y --scope irums-projects-1428d2a1",

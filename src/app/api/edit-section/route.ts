@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { imageModels, type ImageProvider as Provider } from "@/lib/image-models";
+import { generateOpenAIImage, generateGoogleImage } from "@/lib/image-generation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const OPENAI_IMAGE_MODEL = "gpt-image-2-2026-04-21";
-const GOOGLE_NANO_BANANA_2_MODEL = "gemini-3.1-flash-image";
-
-type Provider = "openai" | "google";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: provider === "google" ? "Google Nano Banana 2 API 키가 필요합니다." : "OpenAI Image 2.0 API 키가 필요합니다." },
+        { error: `${imageModels[provider].label} API 키가 필요합니다.` },
         { status: 400 }
       );
     }
@@ -58,9 +55,10 @@ export async function POST(request: NextRequest) {
       "규칙: 제품명, 핵심 수치, 안전한 표현 원칙은 유지한다. 근거 없는 효능/리뷰/인증/수치를 새로 만들지 않는다. 같은 상세페이지 안에서 이어 붙였을 때 반복 레이아웃처럼 보이지 않도록 정보 배치, 카드 구조, 타이포 리듬을 조정한다. 한 장에 메시지 하나만 담고, 오탈자 없는 자연스러운 한국어로 표기한다."
     ].join("\n");
 
+    const references = [{ ...image, name: "section.png" }];
     const edited = provider === "google"
-      ? await editWithGoogle({ apiKey, prompt, image })
-      : await editWithOpenAI({ apiKey, prompt, image });
+      ? await generateGoogleImage({ apiKey, prompt, references })
+      : await generateOpenAIImage({ apiKey, prompt, references });
 
     return NextResponse.json({
       imageUrl: `data:${edited.mimeType};base64,${edited.buffer.toString("base64")}`,
@@ -73,71 +71,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function editWithOpenAI({
-  apiKey,
-  prompt,
-  image
-}: {
-  apiKey: string;
-  prompt: string;
-  image: { mimeType: string; buffer: Buffer };
-}) {
-  const form = new FormData();
-  form.append("model", OPENAI_IMAGE_MODEL);
-  form.append("prompt", prompt);
-  form.append("size", "1152x2048");
-  form.append("quality", "low");
-  form.append("output_format", "png");
-  form.append("image[]", new Blob([new Uint8Array(image.buffer)], { type: image.mimeType }), "section.png");
-
-  const response = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form
-  });
-
-  const data = await readJsonResponse(response);
-  if (!response.ok) throw new Error(withRequestId(data?.error?.message || "OpenAI Image 2.0 섹션 수정 실패", response));
-  const imageBase64 = data?.data?.[0]?.b64_json;
-  if (!imageBase64) throw new Error("OpenAI 응답에 이미지 데이터가 없습니다.");
-  return { mimeType: "image/png", buffer: Buffer.from(imageBase64, "base64") };
-}
-
-async function editWithGoogle({
-  apiKey,
-  prompt,
-  image
-}: {
-  apiKey: string;
-  prompt: string;
-  image: { mimeType: string; buffer: Buffer };
-}) {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_NANO_BANANA_2_MODEL}:generateContent`, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inlineData: { mimeType: image.mimeType, data: image.buffer.toString("base64") } }
-        ]
-      }]
-    })
-  });
-
-  const data = await readJsonResponse(response);
-  if (!response.ok) throw new Error(withRequestId(data?.error?.message || "Google Nano Banana 2 섹션 수정 실패", response));
-  const imagePart = data?.candidates?.[0]?.content?.parts?.find((part: { inlineData?: { data?: string } }) => part.inlineData);
-  if (!imagePart?.inlineData?.data) throw new Error("Google 응답에 이미지 데이터가 없습니다.");
-  return {
-    mimeType: imagePart.inlineData.mimeType || "image/png",
-    buffer: Buffer.from(imagePart.inlineData.data, "base64")
-  };
-}
-
 function parseDataUrl(value: string) {
   const match = value.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return null;
@@ -147,20 +80,6 @@ function parseDataUrl(value: string) {
   };
 }
 
-async function readJsonResponse(response: Response) {
-  const text = await response.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { error: { message: text || response.statusText } };
-  }
-}
-
-function withRequestId(message: string, response: Response) {
-  const requestId = response.headers.get("x-request-id");
-  return requestId ? `${message} (request_id: ${requestId})` : message;
-}
-
 function humanizeProviderError(message: string) {
   if (message.includes("Incorrect API key provided")) {
     return "OpenAI API 키가 올바르지 않습니다. API 키 설정에서 기존 키를 삭제한 뒤 OpenAI Platform에서 발급한 최신 키를 다시 입력해주세요.";
@@ -168,17 +87,17 @@ function humanizeProviderError(message: string) {
   if (message.includes("invalid_api_key")) {
     return "API 키가 올바르지 않습니다. 선택한 이미지 생성 모델에 맞는 API 키를 다시 입력해주세요.";
   }
-  if (message.includes("must be verified") && message.includes("gpt-image-2-2026-04-21")) {
-    return "OpenAI Image 2.0 사용 권한이 아직 없습니다. OpenAI 조직 인증을 완료한 뒤 다시 시도해주세요.";
+  if (message.includes("must be verified") && message.includes(imageModels.openai.id)) {
+    return "OpenAI Image 2.5 사용 권한이 아직 없습니다. OpenAI 조직 인증을 완료한 뒤 다시 시도해주세요.";
   }
-  if (message.includes("does not have access to model") && message.includes("gpt-image-2-2026-04-21")) {
-    return "현재 입력한 OpenAI API 키의 프로젝트가 OpenAI Image 2.0 모델에 접근할 수 없습니다. 조직 인증, 프로젝트 권한, 결제 상태를 확인한 뒤 Image 2.0 권한이 있는 프로젝트의 API 키를 다시 입력해주세요.";
+  if (message.includes("does not have access to model") && message.includes(imageModels.openai.id)) {
+    return "현재 입력한 OpenAI API 키의 프로젝트가 OpenAI Image 2.5 모델에 접근할 수 없습니다. 조직 인증, 프로젝트 권한, 결제 상태를 확인한 뒤 Image 2.5 권한이 있는 프로젝트의 API 키를 다시 입력해주세요.";
   }
   if (message.includes("Billing hard limit has been reached")) {
     return "OpenAI 결제 한도에 도달해 섹션 수정이 중단되었습니다. OpenAI Platform의 Billing 한도 또는 사용량 제한을 올린 뒤 다시 시도해주세요.";
   }
   if (message.includes("exceeded your current quota") || message.includes("Quota exceeded")) {
-    return "Google Nano Banana 2 API 할당량을 초과했습니다. Google AI Studio 또는 Cloud Console에서 현재 사용량과 rate limit을 확인한 뒤 잠시 후 다시 시도해주세요.";
+    return "Google Nano Banana 2.1 API 할당량을 초과했습니다. Google AI Studio 또는 Cloud Console에서 현재 사용량과 rate limit을 확인한 뒤 잠시 후 다시 시도해주세요.";
   }
   return message;
 }

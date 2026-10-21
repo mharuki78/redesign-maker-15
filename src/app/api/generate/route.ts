@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { imageModels, imageModelMeta as modelMeta, type ImageProvider as Provider } from "@/lib/image-models";
+import { generateOpenAIImage, generateGoogleImage } from "@/lib/image-generation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const OPENAI_IMAGE_MODEL = "gpt-image-2-2026-04-21";
-const GOOGLE_NANO_BANANA_2_MODEL = "gemini-3.1-flash-image-preview";
 const ANALYSIS_MODEL = process.env.OPENAI_ANALYSIS_MODEL || "gpt-5.5";
 const MAX_REFERENCE_IMAGES = 4;
 
-type Provider = "openai" | "google";
 
 /**
  * restructure: 원본 근거를 지키되 구매전환 흐름(S1~S8)으로 재구성한다.
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: provider === "google" ? "Google Nano Banana 2 API 키가 필요합니다." : "OpenAI Image 2.0 API 키가 필요합니다." },
+        { error: `${imageModels[provider].label} API 키가 필요합니다.` },
         { status: 400 }
       );
     }
@@ -376,84 +375,32 @@ async function analyzeWithOpenAI({ apiKey, prompt, references }: { apiKey: strin
 }
 
 async function analyzeWithGoogle({ apiKey, prompt, references }: { apiKey: string; prompt: string; references: ReferenceImage[] }) {
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: prompt }];
-  for (const reference of references.slice(0, MAX_REFERENCE_IMAGES)) {
-    parts.push({
-      inlineData: {
-        mimeType: reference.mimeType,
-        data: reference.buffer.toString("base64")
-      }
-    });
-  }
-
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_NANO_BANANA_2_MODEL}:generateContent`, {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
     headers: {
       "x-goog-api-key": apiKey,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ contents: [{ parts }] })
+    body: JSON.stringify({
+      model: imageModels.google.id,
+      store: false,
+      input: [
+        { type: "text", text: prompt },
+        ...references.slice(0, MAX_REFERENCE_IMAGES).map(reference => ({
+          type: "image", mime_type: reference.mimeType, data: reference.buffer.toString("base64")
+        }))
+      ],
+      response_format: { type: "text", mime_type: "application/json" }
+    })
   });
 
   const data = await readJsonResponse(response);
   if (!response.ok) throw new Error(withRequestId(data?.error?.message || "Google 분석 요청 실패", response));
-  const text = data?.candidates?.[0]?.content?.parts?.find((part: { text?: string }) => part.text)?.text || "";
+  const steps: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> = data?.steps || [];
+  const text = steps.filter(step => step.type === "model_output")
+    .flatMap(step => step.content || []).filter(content => content.type === "text")
+    .map(content => content.text || "").join("\n");
   return parseMaybeJson(text);
-}
-
-async function generateOpenAIImage({ apiKey, prompt, references }: { apiKey: string; prompt: string; references: ReferenceImage[] }) {
-  const form = new FormData();
-  form.append("model", OPENAI_IMAGE_MODEL);
-  form.append("prompt", prompt);
-  form.append("size", "1152x2048");
-  form.append("quality", "low");
-  form.append("output_format", "png");
-
-  for (const reference of references.slice(0, MAX_REFERENCE_IMAGES)) {
-    form.append("image[]", new Blob([new Uint8Array(reference.buffer)], { type: reference.mimeType }), reference.name);
-  }
-
-  const response = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form
-  });
-
-  const data = await readJsonResponse(response);
-  if (!response.ok) throw new Error(withRequestId(data?.error?.message || "OpenAI Image 2.0 생성 실패", response));
-  const imageBase64 = data?.data?.[0]?.b64_json;
-  if (!imageBase64) throw new Error("OpenAI 응답에 이미지 데이터가 없습니다.");
-  return { mimeType: "image/png", buffer: Buffer.from(imageBase64, "base64") };
-}
-
-async function generateGoogleImage({ apiKey, prompt, references }: { apiKey: string; prompt: string; references: ReferenceImage[] }) {
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: prompt }];
-  for (const reference of references.slice(0, MAX_REFERENCE_IMAGES)) {
-    parts.push({
-      inlineData: {
-        mimeType: reference.mimeType,
-        data: reference.buffer.toString("base64")
-      }
-    });
-  }
-
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_NANO_BANANA_2_MODEL}:generateContent`, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ contents: [{ parts }] })
-  });
-
-  const data = await readJsonResponse(response);
-  if (!response.ok) throw new Error(withRequestId(data?.error?.message || "Google Nano Banana 2 생성 실패", response));
-  const imagePart = data?.candidates?.[0]?.content?.parts?.find((part: { inlineData?: { data?: string } }) => part.inlineData);
-  if (!imagePart?.inlineData?.data) throw new Error("Google 응답에 이미지 데이터가 없습니다.");
-  return {
-    mimeType: imagePart.inlineData.mimeType || "image/png",
-    buffer: Buffer.from(imagePart.inlineData.data, "base64")
-  };
 }
 
 /** 제품컷 → 히어로(스타일 통일) → 원본 순으로 참조 이미지 예산을 채운다. */
@@ -585,7 +532,7 @@ function buildSections(
 /**
  * 서체를 Pretendard 하나로 못 박는다.
  * "폰트 감각을 맞춘다" 정도로는 모델이 장마다 다른 서체를 골라도 규칙 위반이 아니어서
- * 특히 OpenAI Image 2.0에서 8장의 서체가 제각각으로 나온다.
+ * 여러 장을 생성할 때도 같은 서체 기준을 유지하도록 명시한다.
  */
 const TYPOGRAPHY_RULE =
   "서체 규칙: 이미지 안의 모든 한글, 영문, 숫자는 Pretendard 하나로만 쓴다. Pretendard는 획 굵기가 고른 현대적인 한국어 산세리프이고, 자소가 네모틀에 꽉 차며 끝이 직각으로 잘린 깔끔한 서체다. 정보 위계는 서체를 바꾸지 말고 굵기(Regular / SemiBold / ExtraBold)와 크기로만 만든다. 명조·바탕·궁서·붓글씨·손글씨·기울임체·장식체를 한 글자도 섞지 않고, 영문과 숫자도 세리프로 바꾸지 않는다. 한 화면 안은 물론 모든 섹션이 같은 서체로 보여야 한다.";
@@ -802,13 +749,6 @@ function extractOpenAIText(data: { output?: Array<{ content?: Array<{ text?: str
   return data.output?.flatMap((item) => item.content || []).map((content) => content.text || "").filter(Boolean).join("\n") || "";
 }
 
-function modelMeta(provider: Provider) {
-  if (provider === "google") {
-    return { provider: "google" as const, label: "Google Nano Banana 2", id: GOOGLE_NANO_BANANA_2_MODEL };
-  }
-  return { provider: "openai" as const, label: "OpenAI Image 2.0", id: OPENAI_IMAGE_MODEL };
-}
-
 /**
  * 이미지 API의 일시적 실패(요청 제한, 5xx, 타임아웃)는 잠시 뒤 다시 시도한다.
  * 히어로 직후 나머지 섹션을 연속 생성할 때 요청 제한으로 전체가 중단되던 문제를 막는다.
@@ -860,18 +800,18 @@ function humanizeProviderError(message: string) {
       message.match(/request_id: [^)]+/)?.[0] || ""
     ].filter(Boolean).join(" ");
   }
-  if (message.includes("must be verified") && message.includes("gpt-image-2-2026-04-21")) {
+  if (message.includes("must be verified") && message.includes(imageModels.openai.id)) {
     return [
-      "OpenAI Image 2.0 사용 권한이 아직 없습니다.",
+      "OpenAI Image 2.5 사용 권한이 아직 없습니다.",
       "이 모델은 OpenAI 조직 인증이 필요합니다.",
       "OpenAI Platform > Settings > Organization > General에서 Verify Organization을 완료한 뒤 15분 정도 기다려주세요.",
       message.match(/request_id: [^)]+/)?.[0] || ""
     ].filter(Boolean).join(" ");
   }
-  if (message.includes("does not have access to model") && message.includes("gpt-image-2-2026-04-21")) {
+  if (message.includes("does not have access to model") && message.includes(imageModels.openai.id)) {
     return [
-      "현재 입력한 OpenAI API 키의 프로젝트가 OpenAI Image 2.0 모델에 접근할 수 없습니다.",
-      "OpenAI 조직 인증, 프로젝트 권한, 결제 상태를 확인한 뒤 Image 2.0 권한이 있는 프로젝트의 API 키를 다시 입력해주세요.",
+      "현재 입력한 OpenAI API 키의 프로젝트가 OpenAI Image 2.5 모델에 접근할 수 없습니다.",
+      "OpenAI 조직 인증, 프로젝트 권한, 결제 상태를 확인한 뒤 Image 2.5 권한이 있는 프로젝트의 API 키를 다시 입력해주세요.",
       message.match(/request_id: [^)]+/)?.[0] || ""
     ].filter(Boolean).join(" ");
   }
@@ -883,11 +823,11 @@ function humanizeProviderError(message: string) {
     ].filter(Boolean).join(" ");
   }
   if (message.includes("exceeded your current quota") || message.includes("Quota exceeded")) {
-    return "Google Nano Banana 2 API 할당량을 초과했습니다. Google AI Studio 또는 Cloud Console에서 현재 사용량과 rate limit을 확인한 뒤 잠시 후 다시 시도해주세요.";
+    return "Google Nano Banana 2.1 API 할당량을 초과했습니다. Google AI Studio 또는 Cloud Console에서 현재 사용량과 rate limit을 확인한 뒤 잠시 후 다시 시도해주세요.";
   }
   if (message.includes("Invalid image file or mode") || message.includes("Invalid input image")) {
     return [
-      "업로드 이미지 형식이 OpenAI Image 2.0 편집 입력과 맞지 않습니다.",
+      "업로드 이미지 형식이 OpenAI Image 2.5 편집 입력과 맞지 않습니다.",
       "앱에서 PNG 변환/분할 후 다시 전송하도록 되어 있으니 새로고침 후 다시 생성해주세요.",
       message.match(/request_id: [^)]+/)?.[0] || ""
     ].filter(Boolean).join(" ");
