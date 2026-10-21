@@ -2,8 +2,8 @@
 
 - 최종 갱신: 2026-10-21 Asia/Seoul
 - 작성자: Codex
-- 통합 담당: Codex · redesign-models-20261021
-- 진행 중 작업: 이미지 생성·편집 모델 최신화
+- 통합 담당: 없음
+- 진행 중 작업: 없음
 
 ## 목표와 완료 기준
 
@@ -13,7 +13,8 @@
 
 - 구현: OpenAI Image 2.5 Sunburst와 Google Nano Banana 2.1, 공통 모델 목록·어댑터 적용.
 - 검증: 실제 route handler의 공급자 모의 테스트 8개, Next 빌드·타입 검사 통과. Chrome PC와 390px 모바일에서 모델 선택·설정 표시 확인. 모바일 가로 넘침 없음. Impeccable 변경 파일 검사 결과 `[]`.
-- 미완료: Git push, 운영 배포 확인.
+- 배포: 코드 커밋 `f18b39d46135b5192a6cf230c07309179caf5302`를 지정 저장소 main에 push했고, Vercel `dpl_9SH4pXUGJ6AaDSu8GFs7nLfWWBuw`의 동일 SHA·production·READY·정상 alias를 확인했다. 실제 인트라넷 iframe에서 두 최신 모델명과 선택 동작을 확인했다.
+- 미완료: 사용자 요청 범위의 필수 구현·배포 없음. 실제 유료 생성은 아래 미확인 범위로 남긴다.
 
 ## 유지할 결정
 
@@ -21,7 +22,7 @@
 
 ## 다음 행동
 
-main에 push하고 해당 커밋의 배곧 운영 배포와 실제 인트라넷 화면을 확인한다.
+다음 사용자 요청을 기다린다. 유료 생성 품질 확인이 필요하면 사용자 본인의 해당 공급자 API 키로 한 장만 별도 확인한다.
 
 ## 막힌 점 · 미확인
 
@@ -30,7 +31,7 @@ main에 push하고 해당 커밋의 배곧 운영 배포와 실제 인트라넷 
 
 ## 산출물과 근거
 
-[작업 기록](logs/2026-10-21-image-model-update.md), `tests/image-models.test.cjs`.
+[작업 기록](logs/2026-10-21-image-model-update.md), `tests/image-models.test.cjs`, `output/model-update/production.png`.
 
 ## 실행 환경과 재개 조건
 

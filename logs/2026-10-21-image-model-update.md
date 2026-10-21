@@ -20,6 +20,13 @@
 - HIA 운영 규칙·상태·결정을 이 프로젝트 안에 초기화했다. 기존 AGENTS/CLAUDE 백업과 SHA-256 manifest는 `backups/hia-*`에 있으며 Git에서 제외한다. 기존 지침은 표시 바깥을 보존하고 CLAUDE의 모델 규칙만 사용자 요청에 따라 갱신했다.
 - 새 세션 자동 로딩과 Figma 자산 조회는 미검증.
 
-## 미완료와 다음 행동
+## 운영 검증
 
-GitHub push → 배곧 Vercel 프로젝트의 동일 SHA READY와 실제 인트라넷 모델 선택 확인.
+- 코드 커밋 `f18b39d46135b5192a6cf230c07309179caf5302`: origin/main 일치 확인.
+- 배포 `dpl_9SH4pXUGJ6AaDSu8GFs7nLfWWBuw`: project `prj_CuXYaU9hKDC8x0FCb6Qg1dec9pkD`, production, 동일 SHA, READY. `baegot-redesign-maker.vercel.app` alias 정상.
+- Chrome의 새 검증 탭에서 `https://baegotint.com/automation/redesign-maker` → 새 리디자인 → 생성 옵션을 열어 OpenAI Image 2.5와 Google Nano Banana 2.1을 확인했다. Google 버튼 선택 상태를 확인했다. 기존 사용자 작업 탭은 새로고침하거나 수정하지 않았다.
+- 증거 `output/model-update/production.png`. 로컬 검증 탭과 포트 3002 서버 종료, 임시 viewport reset 완료. 운영 결과 탭은 열어 두었다.
+
+## 미확인과 다음 행동
+
+필수 구현·배포 완료. 실제 유료 이미지 생성 품질, 새 세션 HIA 자동 로딩, Figma 자산 조회는 미검증. 다음 사용자 요청을 기다린다.
